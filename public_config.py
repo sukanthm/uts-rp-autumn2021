@@ -1,4 +1,4 @@
-#DB CONFIG
+#DB CONFIG TABLE DATA
 clusters = [
     {'id': 1, 'cluster_type': 'G'}, #clusters 1-3 allow only ssh from network 192.168.0.0/24
     {'id': 2, 'cluster_type': 'B'},

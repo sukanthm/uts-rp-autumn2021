@@ -4,6 +4,7 @@ import psycopg2.extras
 from private_config import postgres_credentials
 from public_config import clusters, cluster_definitions
 
+
 def main():
     try:
         conn = psycopg2.connect(postgres_credentials)

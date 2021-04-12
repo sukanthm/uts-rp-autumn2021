@@ -10,6 +10,7 @@ from private_config import postgres_credentials
 
 TZ = pytz.timezone('Australia/Sydney')
 
+
 def main():
     print(datetime.now(TZ), "START")
 

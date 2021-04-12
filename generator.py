@@ -6,6 +6,7 @@ import time
 from public_config import gen_ips as ips
 from public_config import gen_ports as ports
 
+
 def ip_gen():
     while True:
         ip = random.choices([i[0] for i in ips], 

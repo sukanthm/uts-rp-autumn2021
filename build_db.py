@@ -5,7 +5,6 @@ import sys
 import traceback
 
 import psycopg2
-import psycopg2.extras
 
 from private_config import postgres_credentials
 
@@ -38,7 +37,7 @@ def main():
             cur.execute('''
                 DROP TABLE IF EXISTS clusters CASCADE;
                 CREATE TABLE clusters (
-                    id SERIAL,
+                    id INTEGER,
                     cluster_type CHAR(1) NOT NULL,
 
                     PRIMARY KEY (id),
@@ -68,6 +67,7 @@ def main():
                     score REAL,
                     datetime TIMESTAMPTZ NOT NULL,
                     cluster_id INTEGER,
+                    child_id INTEGER NOT NULL,
 
                     PRIMARY KEY (id),
                     CONSTRAINT valid_status CHECK(status IN ('G', 'B', 'A')),

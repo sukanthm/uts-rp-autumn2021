@@ -3,14 +3,10 @@ import random
 import string
 import time
 
+from public_config import gen_ips as ips
+from public_config import gen_ports as ports
 
 def ip_gen():
-    ips = [
-        ['192.168.0', 2],
-        ['10.12', 2],
-        ['1.1.1.1', 1],
-        ['', 1],
-    ]
     while True:
         ip = random.choices([i[0] for i in ips], 
             weights=[i[1] for i in ips])[0]
@@ -22,11 +18,6 @@ def ip_gen():
 
 
 def port_gen():
-    ports = [
-        ['22', 3],
-        ['443', 1],
-        ['', 1],
-    ]
     while True:
         port = random.choices([i[0] for i in ports], 
             weights=[i[1] for i in ports])[0]

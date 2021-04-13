@@ -16,6 +16,7 @@ from private_config import postgres_credentials
 
 TZ = pytz.timezone('Australia/Sydney')
 
+
 def get_clusters():
     try:
         conn = psycopg2.connect(postgres_credentials)
@@ -34,12 +35,73 @@ def get_clusters():
     clusters = dict_cur.fetchall()
     dict_cur.close()
     conn.close()
-    return clusters
+
+    output = {'G': {}, 'B': {}} #cluster_id: [{cluster_definition...}, ...]
+    for cluster in clusters:
+        if cluster['id'] not in output[cluster['cluster_type']]:
+            output[cluster['cluster_type']][cluster['id']] = []
+        output[cluster['cluster_type']][cluster['id']].append({
+            'dimension': cluster['dimension'],
+            'range_start': cluster['range_start'],
+            'range_end': cluster['range_end'],
+        })
+
+    return output
+
+
+def compute_cluster_metrics(data, cluster_rules):
+    in_counter = 0
+    in_flag = True
+    dimension_to_data_keyMap = {'time': 'datetime'}
+
+    for rule in cluster_rules:
+        data_key = dimension_to_data_keyMap.get(rule['dimension']) or rule['dimension']
+        VALUE = data[data_key]
+
+        if rule['dimension'] in ['dst_port', 'msg_size']:
+            start, end = int(rule['range_start']), int(rule['range_end'])
+            VALUE = int(VALUE)
+        elif rule['dimension'] == 'time':
+            start = datetime.strptime(rule['range_start'], '%H%M').time()
+            end = datetime.strptime(rule['range_end'], '%H%M').time()
+            VALUE = VALUE.time()
+        else:
+            start, end = rule['range_start'], rule['range_end']
+
+        if start <= VALUE <= end:
+            in_counter += 1
+        else:
+            in_flag = False
+
+    return {
+        'in?': in_flag,
+        'score': 1 - round(in_counter/len(cluster_rules), 2),
+    }
 
 
 def process_data(data, clusters):
-    #TODO: add dimension based anomaly checks
     time.sleep(0.1) #to stop DB flooding
+    min_score = 1.1
+    best_cluster_metrics = None
+
+    for cluster_id in clusters['B'].keys():
+        cluster_output = compute_cluster_metrics(data, clusters['B'][cluster_id])
+        if cluster_output['in?']:
+            return {**cluster_output, 'status': 'B', 'cluster_id': cluster_id}
+        elif cluster_output['score'] < min_score:
+            min_score = cluster_output['score']
+            best_cluster_metrics = {**cluster_output, 'cluster_id': cluster_id}
+
+    for cluster_id in clusters['G'].keys():
+        cluster_output = compute_cluster_metrics(data, clusters['G'][cluster_id])
+        if cluster_output['in?']:
+            return {**cluster_output, 'status': 'G', 'cluster_id': cluster_id}
+        elif cluster_output['score'] < min_score:
+            min_score = cluster_output['score']
+            best_cluster_metrics = {**cluster_output, 'cluster_id': cluster_id}
+
+    return {**best_cluster_metrics, 'status': 'A'}
+
 
 
 def child(child_id, n_CHILDREN, clusters):
@@ -65,10 +127,10 @@ def child(child_id, n_CHILDREN, clusters):
         data['datetime'] = str(data['datetime'])
         output.append({
             'msg': json.dumps(data),
-            'status': 'A',
-            'score': 42,
+            'status': metrics.get('status'),
+            'score': metrics.get('score'),
             'datetime': datetime.now(TZ),
-            'cluster_id': 1,
+            'cluster_id': metrics.get('cluster_id'),
             'child_id': child_id,
         })
 

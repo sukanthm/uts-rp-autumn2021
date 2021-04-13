@@ -17,8 +17,8 @@ def main():
 
     psycopg2.extras.execute_batch(cur,
     '''
-        INSERT INTO clusters (id, cluster_type) 
-        VALUES (%(id)s, %(cluster_type)s);
+        INSERT INTO clusters (id, cluster_type, cluster_name, cluster_description) 
+        VALUES (%(id)s, %(cluster_type)s, %(cluster_name)s, %(cluster_description)s);
     ''', clusters)
     psycopg2.extras.execute_batch(cur,
     '''

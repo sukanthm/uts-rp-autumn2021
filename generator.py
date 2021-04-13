@@ -1,4 +1,4 @@
-import json
+from datetime import datetime
 import random
 import string
 import time
@@ -27,7 +27,7 @@ def port_gen():
         yield port
 
 
-def dummy_KVs():
+def dummy_KVs_gen():
     while True:
         output = {}
         for i in range(random.randrange(1, 4)):
@@ -37,18 +37,30 @@ def dummy_KVs():
         yield output
 
 
+def time_gen():
+    today = datetime.now()
+    while True:
+        yield today.replace(
+            hour=random.randrange(0, 23), 
+            minute=random.randrange(0, 59), 
+            second=random.randrange(0, 59), 
+            microsecond=0
+        )
+
+
 def main():
     ip_gen_obj = ip_gen()
     port_gen_obj = port_gen()
-    dummy_KVs_obj = dummy_KVs()
+    dummy_KVs_obj = dummy_KVs_gen()
+    time_gen_obj = time_gen()
     while True:
         data = {
             'src_ip': next(ip_gen_obj),
             'dst_port': next(port_gen_obj),
-            'msg_size': 0, #random.randrange(1, 10**5),
+            'datetime': next(time_gen_obj),
+            'msg_size': random.randrange(10, 10**5),
             **next(dummy_KVs_obj),
         }
-        data['msg_size'] = len(json.dumps(data))
         print(data) #DEV
         time.sleep(1) #DEV
         # yield data #PROD

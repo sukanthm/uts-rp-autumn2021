@@ -40,6 +40,8 @@ def main():
                 CREATE TABLE clusters (
                     id INTEGER,
                     cluster_type CHAR(1) NOT NULL,
+                    cluster_name TEXT,
+                    cluster_description TEXT,
 
                     PRIMARY KEY (id),
                     CONSTRAINT valid_cluster_type CHECK(cluster_type IN ('G', 'B'))

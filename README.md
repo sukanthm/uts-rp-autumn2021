@@ -50,3 +50,10 @@ python3 ./build_db.py data #wipe only data table
 ```bash
 python3 ./populate_config.py
 ```
+<br/>
+
+- RUN
+```bash
+python3 build_db.py all && python3 populate_config.py
+python3 build_db.py data && python3 ids.py 3 #3 children
+```

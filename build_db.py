@@ -70,7 +70,7 @@ def main():
                     score REAL,
                     datetime TIMESTAMPTZ NOT NULL,
                     cluster_id INTEGER,
-                    child_id INTEGER NOT NULL,
+                    child_id TEXT NOT NULL,
 
                     PRIMARY KEY (id),
                     CONSTRAINT valid_status CHECK(status IN ('G', 'B', 'A')),

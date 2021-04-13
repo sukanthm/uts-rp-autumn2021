@@ -12,9 +12,9 @@ def ip_gen():
         ip = random.choices([i[0] for i in ips], 
             weights=[i[1] for i in ips])[0]
         if ip == '':
-            ip += str(random.randrange(1, 255))
+            ip += str(random.randint(1, 255))
         for i in range(3-ip.count('.')):
-            ip += '.' + str(random.randrange(1, 255))
+            ip += '.' + str(random.randint(1, 255))
         yield ip
 
 
@@ -23,16 +23,16 @@ def port_gen():
         port = random.choices([i[0] for i in ports], 
             weights=[i[1] for i in ports])[0]
         if port == '':
-            port = str(random.randrange(1, 65535))
+            port = str(random.randint(1, 65535))
         yield port
 
 
 def dummy_KVs_gen():
     while True:
         output = {}
-        for i in range(random.randrange(1, 4)):
-            key = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randrange(1, 10)))
-            value = ''.join(random.choices(string.hexdigits, k=random.randrange(0, 20)))
+        for i in range(random.randint(1, 4)):
+            key = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10)))
+            value = ''.join(random.choices(string.hexdigits, k=random.randint(0, 20)))
             output[key] = value
         yield output
 
@@ -41,9 +41,9 @@ def time_gen():
     today = datetime.now()
     while True:
         yield today.replace(
-            hour=random.randrange(0, 23), 
-            minute=random.randrange(0, 59), 
-            second=random.randrange(0, 59), 
+            hour=random.randint(0, 23), 
+            minute=random.randint(0, 59), 
+            second=random.randint(0, 59), 
             microsecond=0
         )
 
@@ -58,12 +58,12 @@ def main():
             'src_ip': next(ip_gen_obj),
             'dst_port': next(port_gen_obj),
             'datetime': next(time_gen_obj),
-            'msg_size': random.randrange(10, 10**5),
+            'msg_size': random.randint(10, 10**5),
             **next(dummy_KVs_obj),
         }
-        print(data) #DEV
-        time.sleep(1) #DEV
-        # yield data #PROD
+        # print(data) #DEV
+        # time.sleep(1) #DEV
+        yield data #PROD
 
 
 if __name__ == '__main__':

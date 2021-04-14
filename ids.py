@@ -80,8 +80,8 @@ def compute_cluster_metrics(data, cluster_rules):
 
 
 def process_data(data, clusters):
-    time.sleep(0.1) #to stop DB flooding
-    min_score = 1.1
+    time.sleep(0.05) #to stop DB flooding #unconstrained ~8k ips/child
+    min_score = 1.1 #real max score is 1 #TODO: improve this scoring system?
     best_cluster_metrics = None
 
     for cluster_id in clusters['B'].keys():
@@ -105,7 +105,9 @@ def process_data(data, clusters):
 
 
 def child(child_id, n_CHILDREN, clusters):
+    time.sleep((child_id-1)*n_CHILDREN) #one time, to stagger DB dumps
     child_id_text = f'child#{child_id}'
+    db_dump_gap = n_CHILDREN**2
     print(datetime.now(TZ), f"{child_id_text} START")
     try:
         conn = psycopg2.connect(postgres_credentials)
@@ -134,16 +136,16 @@ def child(child_id, n_CHILDREN, clusters):
             'child_id': child_id,
         })
 
-        if (datetime.now(TZ) - timer_start).seconds > n_CHILDREN*3 + child_id:
+        if (datetime.now(TZ) - timer_start).seconds > db_dump_gap:
             timer_end = datetime.now(TZ)
             ips = round(len(output)/(timer_end-timer_start).total_seconds(), 2) #items per second
-            print(datetime.now(TZ), child_id_text, f'{ips} items/second, dumping to SQL')
+            print(datetime.now(TZ), child_id_text, f'{ips} items/second, dumping {len(output)} items to SQL')
             psycopg2.extras.execute_batch(cur,'''
                 INSERT INTO data (msg, status, score, datetime, cluster_id, child_id) 
                 VALUES (%(msg)s, %(status)s, %(score)s, %(datetime)s, %(cluster_id)s, %(child_id)s);
             ''', output)
-            output = []
             conn.commit()
+            output = []
             timer_start = datetime.now(TZ)
     
     cur.close()
@@ -161,7 +163,7 @@ def main():
     clusters = get_clusters()
 
     start_dt = datetime.now(TZ)
-    print(datetime.now(TZ), f'starting {n_CHILDREN} children, children will dump data every {n_CHILDREN*3} secs')
+    print(datetime.now(TZ), f'starting {n_CHILDREN} children, will dump data every {n_CHILDREN**2} secs')
     for i in range(n_CHILDREN):
         multiprocessing.Process(target=child, args=(i+1, n_CHILDREN, clusters)).start()        
 

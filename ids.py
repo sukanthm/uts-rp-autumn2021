@@ -80,7 +80,7 @@ def compute_cluster_metrics(data, cluster_rules):
 
 
 def process_data(data, clusters):
-    time.sleep(0.05) #to stop DB flooding #unconstrained ~8k ips/child
+    time.sleep(0.05) #to stop DB flooding #unconstrained ~4.5K ips/child
     min_score = 1.1 #real max score is 1 #TODO: improve this scoring system?
     best_cluster_metrics = None
 
@@ -104,7 +104,7 @@ def process_data(data, clusters):
 
 
 
-def child(child_id, n_CHILDREN, clusters):
+def child(child_id, n_CHILDREN, clusters, db_dump_flag):
     time.sleep((child_id-1)*n_CHILDREN) #one time, to stagger DB dumps
     child_id_text = f'child#{child_id}'
     db_dump_gap = n_CHILDREN**2
@@ -140,11 +140,12 @@ def child(child_id, n_CHILDREN, clusters):
             timer_end = datetime.now(TZ)
             ips = round(len(output)/(timer_end-timer_start).total_seconds(), 2) #items per second
             print(datetime.now(TZ), child_id_text, f'{ips} items/second, dumping {len(output)} items to SQL')
-            psycopg2.extras.execute_batch(cur,'''
-                INSERT INTO data (msg, status, score, datetime, cluster_id, child_id) 
-                VALUES (%(msg)s, %(status)s, %(score)s, %(datetime)s, %(cluster_id)s, %(child_id)s);
-            ''', output)
-            conn.commit()
+            if db_dump_flag:
+                psycopg2.extras.execute_batch(cur,'''
+                    INSERT INTO data (msg, status, score, datetime, cluster_id, child_id) 
+                    VALUES (%(msg)s, %(status)s, %(score)s, %(datetime)s, %(cluster_id)s, %(child_id)s);
+                ''', output)
+                conn.commit()
             output = []
             timer_start = datetime.now(TZ)
     
@@ -165,7 +166,7 @@ def main():
     start_dt = datetime.now(TZ)
     print(datetime.now(TZ), f'starting {n_CHILDREN} children, will dump data every {n_CHILDREN**2} secs')
     for i in range(n_CHILDREN):
-        multiprocessing.Process(target=child, args=(i+1, n_CHILDREN, clusters)).start()        
+        multiprocessing.Process(target=child, args=(i+1, n_CHILDREN, clusters, False)).start()        
 
 
 if __name__ == '__main__':

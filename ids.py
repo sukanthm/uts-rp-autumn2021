@@ -108,8 +108,7 @@ def child(child_id, n_CHILDREN, clusters, db_dump_flag):
     time.sleep(child_id-1) #one time, to stagger DB dumps
     child_id_text = f'child#{child_id}'
     db_dump_gap = n_CHILDREN
-    if child_id == 1:
-        print()
+    print() if child_id == 1 else False
     print(datetime.now(TZ), f"{child_id_text} START")
     try:
         conn = psycopg2.connect(postgres_credentials)
@@ -141,12 +140,11 @@ def child(child_id, n_CHILDREN, clusters, db_dump_flag):
         except StopIteration:
             IDS_CONTINUE = False
 
-        if (not IDS_CONTINUE) or (datetime.now(TZ) - timer_start).seconds > db_dump_gap:
+        if (not IDS_CONTINUE and len(output)) or (datetime.now(TZ) - timer_start).seconds > db_dump_gap:
             timer_end = datetime.now(TZ)
             ips = round(len(output)/(timer_end-timer_start).total_seconds(), 2) #items per second
-            if child_id == 1:
-                print()
-            print(datetime.now(TZ), child_id_text, f'{ips} items/second, dumping {len(output)} items to SQL')
+            print() if child_id == 1 else False
+            print(datetime.now(TZ), child_id_text, f'{ips} items/second, dumping {len(output)} items')
             if db_dump_flag:
                 psycopg2.extras.execute_batch(cur,'''
                     INSERT INTO data (msg, status, score, datetime, cluster_id, child_id) 
@@ -158,11 +156,8 @@ def child(child_id, n_CHILDREN, clusters, db_dump_flag):
     
     cur.close()
     conn.close()
-    if child_id == 1:
-        print()
     print(datetime.now(TZ), f"{child_id_text} STOP")
     return
-    #TODO: join/exit child here
 
 
 def main():
@@ -176,9 +171,22 @@ def main():
     clusters = get_clusters()
 
     start_dt = datetime.now(TZ)
-    print(datetime.now(TZ), f'starting {n_CHILDREN} children')
+    print(datetime.now(TZ), f'parent starting {n_CHILDREN} children')
+
+    children = []
     for i in range(n_CHILDREN):
-        multiprocessing.Process(target=child, args=(i+1, n_CHILDREN, clusters, False)).start()        
+        children.append(
+            multiprocessing.Process(target=child, args=(i+1, n_CHILDREN, clusters, False))
+        )
+        children[-1].start()
+    
+    for i in range(n_CHILDREN):
+        children[i].join()
+        print(datetime.now(TZ), f'parent JOINED child {i+1}')
+    
+    print()
+    print(datetime.now(TZ), f'parent STOP')
+    return
 
 
 if __name__ == '__main__':

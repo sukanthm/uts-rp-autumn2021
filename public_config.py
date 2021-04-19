@@ -39,6 +39,6 @@ gen_ports = [
 generator_timeline = [
     #secs, job, items/sec
     # [30, 'random', 1],
-    [60, 'ddos', 5],
+    [20, 'ddos', 5],
     # [40, 'random', 1]
 ]

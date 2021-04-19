@@ -123,22 +123,25 @@ def child(child_id, n_CHILDREN, clusters, db_dump_flag):
     data_gen_obj = data_gen()
     output = []
     timer_start = datetime.now(TZ)
-    while True:
-        data = next(data_gen_obj)
+    IDS_CONTINUE = True
+    while IDS_CONTINUE:
+        try:
+            data = next(data_gen_obj)
+            metrics = process_data(data, clusters)
 
-        metrics = process_data(data, clusters)
+            data['datetime'] = str(data['datetime'])
+            output.append({
+                'msg': json.dumps(data),
+                'status': metrics.get('status'),
+                'score': metrics.get('score'),
+                'datetime': datetime.now(TZ),
+                'cluster_id': metrics.get('cluster_id'),
+                'child_id': child_id,
+            })
+        except StopIteration:
+            IDS_CONTINUE = False
 
-        data['datetime'] = str(data['datetime'])
-        output.append({
-            'msg': json.dumps(data),
-            'status': metrics.get('status'),
-            'score': metrics.get('score'),
-            'datetime': datetime.now(TZ),
-            'cluster_id': metrics.get('cluster_id'),
-            'child_id': child_id,
-        })
-
-        if (datetime.now(TZ) - timer_start).seconds > db_dump_gap:
+        if (not IDS_CONTINUE) or (datetime.now(TZ) - timer_start).seconds > db_dump_gap:
             timer_end = datetime.now(TZ)
             ips = round(len(output)/(timer_end-timer_start).total_seconds(), 2) #items per second
             if child_id == 1:
@@ -155,6 +158,11 @@ def child(child_id, n_CHILDREN, clusters, db_dump_flag):
     
     cur.close()
     conn.close()
+    if child_id == 1:
+        print()
+    print(datetime.now(TZ), f"{child_id_text} STOP")
+    return
+    #TODO: join/exit child here
 
 
 def main():

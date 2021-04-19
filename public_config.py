@@ -35,3 +35,10 @@ gen_ports = [
         ['443', 1],
         ['', 1],
     ]
+
+generator_timeline = [
+    #secs, job, items/sec
+    # [30, 'random', 1],
+    [60, 'ddos', 5],
+    # [40, 'random', 1]
+]

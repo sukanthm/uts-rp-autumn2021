@@ -1,13 +1,14 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 import string
 import time
 
 from public_config import gen_ips as ips
 from public_config import gen_ports as ports
+from public_config import generator_timeline
 
 
-def ip_gen():
+def ip_gen(ips):
     while True:
         ip = random.choices([i[0] for i in ips], 
             weights=[i[1] for i in ips])[0]
@@ -18,7 +19,7 @@ def ip_gen():
         yield ip
 
 
-def port_gen():
+def port_gen(ports):
     while True:
         port = random.choices([i[0] for i in ports], 
             weights=[i[1] for i in ports])[0]
@@ -49,21 +50,52 @@ def time_gen():
 
 
 def main():
-    ip_gen_obj = ip_gen()
-    port_gen_obj = port_gen()
-    dummy_KVs_obj = dummy_KVs_gen()
-    time_gen_obj = time_gen()
-    while True:
-        data = {
-            'src_ip': next(ip_gen_obj),
-            'dst_port': next(port_gen_obj),
-            'datetime': next(time_gen_obj),
-            'msg_size': random.randint(10, 10**5),
-            **next(dummy_KVs_obj),
-        }
-        # print(data) #DEV
-        # time.sleep(1) #DEV
-        yield data #PROD
+    for [secs, job, items_per_sec] in generator_timeline:
+
+        if job == 'random':
+            ip_gen_obj = ip_gen(ips)
+            dst_port_gen_obj = port_gen(ports)
+            src_port_gen_obj = port_gen(ports)
+            dummy_KVs_obj = dummy_KVs_gen()
+            time_gen_obj = time_gen()
+
+            sleep_secs = 1 / items_per_sec
+            job_start = datetime.now()
+            while job_start + timedelta(seconds=secs) > datetime.now():
+                time.sleep(sleep_secs)
+                data = {
+                    'src_ip': next(ip_gen_obj),
+                    'src_port': next(src_port_gen_obj),
+                    'dst_port': next(dst_port_gen_obj),
+                    'datetime': next(time_gen_obj),
+                    'msg_size': random.randint(10, 10**5),
+                    **next(dummy_KVs_obj),
+                }
+                yield data
+        
+
+        if job == 'ddos':
+            ip_gen_obj = ip_gen([['', 1]])
+            IPs = [next(ip_gen_obj) for i in range(10)]
+            src_port_gen_obj = port_gen(ports)
+            dummy_KVs_obj = dummy_KVs_gen()
+            time_gen_obj = time_gen()
+
+            sleep_secs = 1 / items_per_sec
+            job_start = datetime.now()
+            while job_start + timedelta(seconds=secs) > datetime.now():
+                time.sleep(sleep_secs)
+                data = {
+                    'src_ip': random.choice(IPs),
+                    'src_port': next(src_port_gen_obj),
+                    'dst_port': 443,
+                    'datetime': next(time_gen_obj),
+                    'msg_size': random.randint(10, 10**5),
+                    #client will never send final 'ACK', after theoretically receiving a 'SYN+ACK' from server
+                    'TCP_FLAG': 'SYN',
+                    **next(dummy_KVs_obj),
+                }
+                yield data
 
 
 if __name__ == '__main__':

@@ -80,7 +80,7 @@ def compute_cluster_metrics(data, cluster_rules):
 
 
 def process_data(data, clusters):
-    time.sleep(0.05) #to stop DB flooding #unconstrained ~4.5K ips/child
+    #unconstrained ~4.5K ips/child
     min_score = 1.1 #real max score is 1 #TODO: improve this scoring system?
     best_cluster_metrics = None
 
@@ -105,9 +105,11 @@ def process_data(data, clusters):
 
 
 def child(child_id, n_CHILDREN, clusters, db_dump_flag):
-    time.sleep((child_id-1)*n_CHILDREN) #one time, to stagger DB dumps
+    time.sleep(child_id-1) #one time, to stagger DB dumps
     child_id_text = f'child#{child_id}'
-    db_dump_gap = n_CHILDREN**2
+    db_dump_gap = n_CHILDREN
+    if child_id == 1:
+        print()
     print(datetime.now(TZ), f"{child_id_text} START")
     try:
         conn = psycopg2.connect(postgres_credentials)
@@ -139,6 +141,8 @@ def child(child_id, n_CHILDREN, clusters, db_dump_flag):
         if (datetime.now(TZ) - timer_start).seconds > db_dump_gap:
             timer_end = datetime.now(TZ)
             ips = round(len(output)/(timer_end-timer_start).total_seconds(), 2) #items per second
+            if child_id == 1:
+                print()
             print(datetime.now(TZ), child_id_text, f'{ips} items/second, dumping {len(output)} items to SQL')
             if db_dump_flag:
                 psycopg2.extras.execute_batch(cur,'''
@@ -164,7 +168,7 @@ def main():
     clusters = get_clusters()
 
     start_dt = datetime.now(TZ)
-    print(datetime.now(TZ), f'starting {n_CHILDREN} children, will dump data every {n_CHILDREN**2} secs')
+    print(datetime.now(TZ), f'starting {n_CHILDREN} children')
     for i in range(n_CHILDREN):
         multiprocessing.Process(target=child, args=(i+1, n_CHILDREN, clusters, False)).start()        
 

@@ -30,15 +30,19 @@ gen_ips = [
         ['1.1.1.1', 1],
         ['', 1],
     ]
-gen_ports = [
-        ['22', 3],
-        ['443', 1],
+gen_ports_dst = [
+        ['22', 3], #ssh
+        ['80', 1], #http
+        ['5432', 1], #postgres default
+    ]
+gen_ports_src = [
         ['', 1],
     ]
 
 generator_timeline = [
     #secs, job, items/sec
-    # [30, 'random', 1],
-    [20, 'ddos', 5],
-    # [40, 'random', 1]
+    [5, 'random', 1],
+    [10, 'ddos', 20],
+    [5, 'random', 1]
 ]
+ddos_no_of_ip = 5

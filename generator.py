@@ -4,8 +4,8 @@ import string
 import time
 
 from public_config import gen_ips as ips
-from public_config import gen_ports as ports
-from public_config import generator_timeline
+from public_config import gen_ports_dst, gen_ports_src
+from public_config import generator_timeline, ddos_no_of_ip
 
 
 def ip_gen(ips):
@@ -24,7 +24,7 @@ def port_gen(ports):
         port = random.choices([i[0] for i in ports], 
             weights=[i[1] for i in ports])[0]
         if port == '':
-            port = str(random.randint(1, 65535))
+            port = str(random.randint(49152, 65535)) #ephemeral only
         yield port
 
 
@@ -54,14 +54,14 @@ def main():
 
         if job == 'random':
             ip_gen_obj = ip_gen(ips)
-            dst_port_gen_obj = port_gen(ports)
-            src_port_gen_obj = port_gen(ports)
+            dst_port_gen_obj = port_gen(gen_ports_dst)
+            src_port_gen_obj = port_gen(gen_ports_src)
             dummy_KVs_obj = dummy_KVs_gen()
             time_gen_obj = time_gen()
 
             sleep_secs = 1 / items_per_sec
             job_start = datetime.now()
-            while job_start + timedelta(seconds=secs) > datetime.now():
+            while job_start + timedelta(seconds=secs) >= datetime.now():
                 time.sleep(sleep_secs)
                 data = {
                     'src_ip': next(ip_gen_obj),
@@ -76,19 +76,19 @@ def main():
 
         if job == 'ddos':
             ip_gen_obj = ip_gen([['', 1]])
-            IPs = [next(ip_gen_obj) for i in range(10)]
-            src_port_gen_obj = port_gen(ports)
+            IPs = [next(ip_gen_obj) for i in range(ddos_no_of_ip)] #pick N ip to ddos from
+            src_port_gen_obj = port_gen(gen_ports_src) #fully random
             dummy_KVs_obj = dummy_KVs_gen()
             time_gen_obj = time_gen()
 
             sleep_secs = 1 / items_per_sec
             job_start = datetime.now()
-            while job_start + timedelta(seconds=secs) > datetime.now():
+            while job_start + timedelta(seconds=secs) >= datetime.now():
                 time.sleep(sleep_secs)
                 data = {
                     'src_ip': random.choice(IPs),
                     'src_port': next(src_port_gen_obj),
-                    'dst_port': 443,
+                    'dst_port': 443, #ddos always on https
                     'datetime': next(time_gen_obj),
                     'msg_size': random.randint(10, 10**5),
                     #client will never send final 'ACK', after theoretically receiving a 'SYN+ACK' from server

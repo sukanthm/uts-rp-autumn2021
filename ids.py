@@ -126,6 +126,7 @@ def child(child_id, n_CHILDREN, clusters, db_dump_flag):
     while IDS_CONTINUE:
         try:
             data = next(data_gen_obj)
+            # print(child_id_text, data)
             metrics = process_data(data, clusters)
 
             data['datetime'] = str(data['datetime'])
@@ -140,11 +141,11 @@ def child(child_id, n_CHILDREN, clusters, db_dump_flag):
         except StopIteration:
             IDS_CONTINUE = False
 
-        if (not IDS_CONTINUE and len(output)) or (datetime.now(TZ) - timer_start).seconds > db_dump_gap:
+        if (not IDS_CONTINUE and len(output)) or (datetime.now(TZ) - timer_start).total_seconds() > db_dump_gap:
             timer_end = datetime.now(TZ)
             ips = round(len(output)/(timer_end-timer_start).total_seconds(), 2) #items per second
             print() if child_id == 1 else False
-            print(datetime.now(TZ), child_id_text, f'{ips} items/second, dumping {len(output)} items')
+            print(datetime.now(TZ), child_id_text, f'{ips} items/second, dumping {len(output)} item(s)')
             if db_dump_flag:
                 psycopg2.extras.execute_batch(cur,'''
                     INSERT INTO data (msg, status, score, datetime, cluster_id, child_id) 

@@ -52,7 +52,7 @@ def get_clusters():
 def compute_cluster_metrics(data, cluster_rules):
     in_counter = 0
     in_flag = True
-    dimension_to_data_keyMap = {'time': 'datetime'}
+    dimension_to_data_keyMap = {'time': 'gen_datetime'}
 
     for rule in cluster_rules:
         data_key = dimension_to_data_keyMap.get(rule['dimension']) or rule['dimension']
@@ -129,12 +129,12 @@ def child(child_id, n_CHILDREN, clusters, db_dump_flag):
             # print(child_id_text, data)
             metrics = process_data(data, clusters)
 
-            data['datetime'] = str(data['datetime'])
+            data['gen_datetime'] = str(data['gen_datetime'])
             output.append({
                 'msg': json.dumps(data),
                 'status': metrics.get('status'),
                 'score': metrics.get('score'),
-                'datetime': datetime.now(TZ),
+                'arrival_datetime': datetime.now(TZ),
                 'cluster_id': metrics.get('cluster_id'),
                 'child_id': child_id,
             })
@@ -149,7 +149,7 @@ def child(child_id, n_CHILDREN, clusters, db_dump_flag):
             if db_dump_flag:
                 psycopg2.extras.execute_batch(cur,'''
                     INSERT INTO data (msg, status, score, datetime, cluster_id, child_id) 
-                    VALUES (%(msg)s, %(status)s, %(score)s, %(datetime)s, %(cluster_id)s, %(child_id)s);
+                    VALUES (%(msg)s, %(status)s, %(score)s, %(arrival_datetime)s, %(cluster_id)s, %(child_id)s);
                 ''', output)
                 conn.commit()
             output = []

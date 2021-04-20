@@ -67,7 +67,7 @@ def main():
                     'src_ip': next(ip_gen_obj),
                     'src_port': next(src_port_gen_obj),
                     'dst_port': next(dst_port_gen_obj),
-                    'datetime': next(time_gen_obj),
+                    'gen_datetime': next(time_gen_obj),
                     'msg_size': random.randint(10, 10**5),
                     **next(dummy_KVs_obj),
                 }
@@ -89,7 +89,7 @@ def main():
                     'src_ip': random.choice(IPs),
                     'src_port': next(src_port_gen_obj),
                     'dst_port': 443, #ddos always on https
-                    'datetime': next(time_gen_obj),
+                    'gen_datetime': next(time_gen_obj),
                     'msg_size': random.randint(10, 10**5),
                     #client will never send final 'ACK', after theoretically receiving a 'SYN+ACK' from server
                     'TCP_FLAG': 'SYN',

@@ -48,12 +48,12 @@ python3 ./build_db.py data #wipe only data table
 
 - Populate config tables
 ```bash
-python3 ./populate_config.py
+python3 ./populate_db_config.py
 ```
 <br/>
 
 - RUN
 ```bash
-python3 build_db.py all && python3 populate_config.py
-python3 build_db.py data && python3 ids.py 3 #3 children
+#3 children
+clear;clear;python3 build_db.py all && python3 populate_db_config.py && python3 ids.py 3
 ```

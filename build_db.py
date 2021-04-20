@@ -66,15 +66,15 @@ def main():
                 CREATE TABLE data (
                     id uuid DEFAULT uuid_generate_v4 (),
                     msg TEXT NOT NULL,
-                    status CHAR(1) NOT NULL,
+                    status TEXT NOT NULL,
                     score REAL,
                     datetime TIMESTAMPTZ NOT NULL,
                     cluster_id INTEGER,
                     child_id TEXT NOT NULL,
 
-                    PRIMARY KEY (id),
-                    CONSTRAINT valid_status CHECK(status IN ('G', 'B', 'A')),
-                    CONSTRAINT fk_cluster_id2 FOREIGN KEY(cluster_id) REFERENCES clusters(id)
+                    PRIMARY KEY (id)
+                    --CONSTRAINT valid_status CHECK(status IN ('G', 'B', 'A', 'D'))
+                    --CONSTRAINT fk_cluster_id2 FOREIGN KEY(cluster_id) REFERENCES clusters(id)
                 );
             ''')
             print(datetime.now(TZ), "rebuilt data table")

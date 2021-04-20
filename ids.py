@@ -1,8 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import multiprocessing
 import json
 import logging
 import pytz
+from queue import Queue
 import random
 import sys
 import time
@@ -13,6 +14,7 @@ import psycopg2.extras
 
 from generator import main as data_gen
 from private_config import postgres_credentials
+from public_config import LIVE_FREQ_DDOS_THRESHOLD, open_tcp_conn_THRESHOLD
 
 TZ = pytz.timezone('Australia/Sydney')
 
@@ -81,7 +83,7 @@ def compute_cluster_metrics(data, cluster_rules):
 
 def process_data(data, clusters):
     #unconstrained ~4.5K ips/child
-    min_score = 1.1 #real max score is 1 #TODO: improve this scoring system?
+    min_score = 1.1 #real score is [0 to 1] #TODO: improve this scoring system?
     best_cluster_metrics = None
 
     for cluster_id in clusters['B'].keys():
@@ -121,21 +123,51 @@ def child(child_id, n_CHILDREN, clusters, db_dump_flag):
 
     data_gen_obj = data_gen()
     output = []
+    freq_q_size = 2 #=1 essentially looks at previous msg only
+    freq_q = Queue(maxsize = freq_q_size)
     timer_start = datetime.now(TZ)
     IDS_CONTINUE = True
+    open_tcp_conn_set = set()
+    DDOS_FLAG = False
+
     while IDS_CONTINUE:
+        msg_DDOS_FLAG = False
+        DDOS_type = []
         try:
             data = next(data_gen_obj)
             # print(child_id_text, data)
-            metrics = process_data(data, clusters)
+
+            arrival_datetime = datetime.now(TZ)
+            q_last_datetime = freq_q.get() if freq_q.full() else None
+            freq_q.put(arrival_datetime)
+            live_freq = freq_q_size / (arrival_datetime-q_last_datetime).total_seconds() if q_last_datetime else None
+            # print(datetime.now(TZ), child_id_text, f'{live_freq} items/second: realtime running freq calculator')
+
+            TCP_FLAG = data.get('TCP_FLAG')
+            ip_port = f"{data['src_ip']}:{str(data['src_port'])}"
+            if TCP_FLAG == 'SYN':
+                open_tcp_conn_set.add(ip_port)
+            elif TCP_FLAG == 'ACK':
+                open_tcp_conn_set.discard(ip_port)
+
+            freq_DDOS_flag = (live_freq or 0) >= LIVE_FREQ_DDOS_THRESHOLD
+            tcp_DDOS_flag = len(open_tcp_conn_set) >= open_tcp_conn_THRESHOLD
+            if freq_DDOS_flag or tcp_DDOS_flag:
+                DDOS_FLAG, msg_DDOS_FLAG = True, True
+                if freq_DDOS_flag:
+                    DDOS_type.append('F')
+                if tcp_DDOS_flag:
+                    DDOS_type.append('T')
+            else:
+                metrics = process_data(data, clusters)
 
             data['gen_datetime'] = str(data['gen_datetime'])
             output.append({
                 'msg': json.dumps(data),
-                'status': metrics.get('status'),
-                'score': metrics.get('score'),
-                'arrival_datetime': datetime.now(TZ),
-                'cluster_id': metrics.get('cluster_id'),
+                'status': '+'.join(DDOS_type) if msg_DDOS_FLAG else metrics.get('status'),
+                'score': 42 if msg_DDOS_FLAG else metrics.get('score'),
+                'arrival_datetime': arrival_datetime,
+                'cluster_id': 0 if msg_DDOS_FLAG else metrics.get('cluster_id'),
                 'child_id': child_id,
             })
         except StopIteration:
@@ -145,7 +177,9 @@ def child(child_id, n_CHILDREN, clusters, db_dump_flag):
             timer_end = datetime.now(TZ)
             ips = round(len(output)/(timer_end-timer_start).total_seconds(), 2) #items per second
             print() if child_id == 1 else False
-            print(datetime.now(TZ), child_id_text, f'{ips} items/second, dumping {len(output)} item(s)')
+            if DDOS_FLAG:
+                print(datetime.now(TZ), child_id_text, f'ALERT: DDOS type {"+".join(DDOS_type)} DETECTED sometime in last {db_dump_gap} seconds')
+            print(datetime.now(TZ), child_id_text, f'{ips} items/second over last {db_dump_gap} seconds, dumping {len(output)} item(s)')
             if db_dump_flag:
                 psycopg2.extras.execute_batch(cur,'''
                     INSERT INTO data (msg, status, score, datetime, cluster_id, child_id) 
@@ -153,6 +187,8 @@ def child(child_id, n_CHILDREN, clusters, db_dump_flag):
                 ''', output)
                 conn.commit()
             output = []
+            DDOS_FLAG = False
+            open_tcp_conn_set = set()
             timer_start = datetime.now(TZ)
     
     cur.close()
@@ -177,7 +213,7 @@ def main():
     children = []
     for i in range(n_CHILDREN):
         children.append(
-            multiprocessing.Process(target=child, args=(i+1, n_CHILDREN, clusters, False))
+            multiprocessing.Process(target=child, args=(i+1, n_CHILDREN, clusters, True))
         )
         children[-1].start()
     

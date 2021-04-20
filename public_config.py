@@ -41,8 +41,12 @@ gen_ports_src = [
 
 generator_timeline = [
     #secs, job, items/sec
-    [5, 'random', 1],
-    [10, 'ddos', 20],
-    [5, 'random', 1]
+    [5, 'random', 5],
+    [5, 'ddos', 20],
+    [5, 'random', 5]
 ]
 ddos_no_of_ip = 5
+
+#IDS CONFIG
+LIVE_FREQ_DDOS_THRESHOLD = 10 #ge items/sec
+open_tcp_conn_THRESHOLD = 10 #ge current open tcp connections 

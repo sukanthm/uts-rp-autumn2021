@@ -89,7 +89,7 @@ def process_data(data, clusters):
     for cluster_id in clusters['B'].keys():
         cluster_output = compute_cluster_metrics(data, clusters['B'][cluster_id])
         if cluster_output['in?']:
-            return {**cluster_output, 'status': 'B', 'cluster_id': cluster_id}
+            return {**cluster_output, 'status': 'Bad', 'cluster_id': cluster_id}
         elif cluster_output['score'] < min_score:
             min_score = cluster_output['score']
             best_cluster_metrics = {**cluster_output, 'cluster_id': cluster_id}
@@ -97,12 +97,12 @@ def process_data(data, clusters):
     for cluster_id in clusters['G'].keys():
         cluster_output = compute_cluster_metrics(data, clusters['G'][cluster_id])
         if cluster_output['in?']:
-            return {**cluster_output, 'status': 'G', 'cluster_id': cluster_id}
+            return {**cluster_output, 'status': 'Good', 'cluster_id': cluster_id}
         elif cluster_output['score'] < min_score:
             min_score = cluster_output['score']
             best_cluster_metrics = {**cluster_output, 'cluster_id': cluster_id}
 
-    return {**best_cluster_metrics, 'status': 'A'}
+    return {**best_cluster_metrics, 'status': 'Anomaly'}
 
 
 
@@ -132,7 +132,6 @@ def child(child_id, n_CHILDREN, clusters, db_dump_flag, generator_timeline):
 
     while IDS_CONTINUE:
         msg_DDOS_FLAG = False
-        DDOS_type = []
         try:
             data = next(data_gen_obj)
             # print(child_id_text, data)
@@ -153,6 +152,7 @@ def child(child_id, n_CHILDREN, clusters, db_dump_flag, generator_timeline):
             freq_DDOS_flag = (live_freq or 0) >= LIVE_FREQ_DDOS_THRESHOLD
             tcp_DDOS_flag = len(open_tcp_conn_set) >= open_tcp_conn_THRESHOLD
             if freq_DDOS_flag or tcp_DDOS_flag:
+                DDOS_type = []
                 DDOS_FLAG, msg_DDOS_FLAG = True, True
                 if freq_DDOS_flag:
                     DDOS_type.append('F')
@@ -164,7 +164,7 @@ def child(child_id, n_CHILDREN, clusters, db_dump_flag, generator_timeline):
             data['gen_datetime'] = str(data['gen_datetime'])
             output.append({
                 'msg': json.dumps(data),
-                'status': '+'.join(DDOS_type) if msg_DDOS_FLAG else metrics.get('status'),
+                'status': 'DDOS_'+'+'.join(DDOS_type) if msg_DDOS_FLAG else metrics.get('status'),
                 'score': 42 if msg_DDOS_FLAG else metrics.get('score'),
                 'arrival_datetime': arrival_datetime,
                 'cluster_id': 0 if msg_DDOS_FLAG else metrics.get('cluster_id'),
@@ -187,6 +187,7 @@ def child(child_id, n_CHILDREN, clusters, db_dump_flag, generator_timeline):
                 ''', output)
                 conn.commit()
             output = []
+            DDOS_type = []
             DDOS_FLAG = False
             open_tcp_conn_set = set()
             timer_start = datetime.now(TZ)

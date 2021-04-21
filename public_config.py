@@ -43,11 +43,13 @@ generator_timelines = [ #1 sub array for each child's generator
     [
         #secs, job, items/sec
         [5, 'random', 5],
-        [5, 'ddos', 20],
+        [5, 'ddos', 30], #only freq goes upto 30ips
+        [5, 'ddos+TCP', 15], #tcp SYN flags sent
+        [5, 'ddos+TCP', 40], #freq above threshold and SYN flags sent
         [5, 'random', 5],
     ],
 ]*10
 
 #IDS CONFIG
-LIVE_FREQ_DDOS_THRESHOLD = 10 #ge items/sec
+LIVE_FREQ_DDOS_THRESHOLD = 20 #ge items/sec
 open_tcp_conn_THRESHOLD = 10 #ge current open tcp connections within reporting window (=n_CHILDREN)

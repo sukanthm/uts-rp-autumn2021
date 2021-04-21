@@ -74,7 +74,7 @@ def main(generator_timeline):
                 yield data
         
 
-        if job == 'ddos':
+        if job.startswith('ddos'):
             ip_gen_obj = ip_gen([['', 1]])
             IPs = [next(ip_gen_obj) for i in range(ddos_no_of_ip)] #pick N ip to ddos from
             src_port_gen_obj = port_gen(gen_ports_src) #fully random
@@ -91,10 +91,11 @@ def main(generator_timeline):
                     'dst_port': 443, #ddos always on https
                     'gen_datetime': next(time_gen_obj),
                     'msg_size': random.randint(10, 10**5),
-                    #client will never send final 'ACK', after theoretically receiving a 'SYN+ACK' from server
-                    'TCP_FLAG': 'SYN',
                     **next(dummy_KVs_obj),
                 }
+                if job == 'ddos+TCP':
+                    #client will never send final 'ACK', after theoretically receiving a 'SYN+ACK' from server
+                    data['TCP_FLAG'] = 'SYN'
                 yield data
 
 

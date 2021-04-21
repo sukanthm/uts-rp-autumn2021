@@ -5,7 +5,7 @@ import time
 
 from public_config import gen_ips as ips
 from public_config import gen_ports_dst, gen_ports_src
-from public_config import generator_timeline, ddos_no_of_ip
+from public_config import ddos_no_of_ip
 
 
 def ip_gen(ips):
@@ -49,7 +49,7 @@ def time_gen():
         )
 
 
-def main():
+def main(generator_timeline):
     for [secs, job, items_per_sec] in generator_timeline:
 
         if job == 'random':

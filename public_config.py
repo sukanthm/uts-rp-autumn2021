@@ -38,15 +38,16 @@ gen_ports_dst = [
 gen_ports_src = [
         ['', 1],
     ]
-
-generator_timeline = [
-    #secs, job, items/sec
-    [5, 'random', 5],
-    [5, 'ddos', 20],
-    [5, 'random', 5]
-]
 ddos_no_of_ip = 5
+generator_timelines = [ #1 sub array for each child's generator
+    [
+        #secs, job, items/sec
+        [5, 'random', 5],
+        [5, 'ddos', 20],
+        [5, 'random', 5],
+    ],
+]*10
 
 #IDS CONFIG
 LIVE_FREQ_DDOS_THRESHOLD = 10 #ge items/sec
-open_tcp_conn_THRESHOLD = 10 #ge current open tcp connections 
+open_tcp_conn_THRESHOLD = 10 #ge current open tcp connections within reporting window (=n_CHILDREN)

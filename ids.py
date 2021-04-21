@@ -14,7 +14,7 @@ import psycopg2.extras
 
 from generator import main as data_gen
 from private_config import postgres_credentials
-from public_config import LIVE_FREQ_DDOS_THRESHOLD, open_tcp_conn_THRESHOLD
+from public_config import LIVE_FREQ_DDOS_THRESHOLD, open_tcp_conn_THRESHOLD, generator_timelines
 
 TZ = pytz.timezone('Australia/Sydney')
 
@@ -106,7 +106,7 @@ def process_data(data, clusters):
 
 
 
-def child(child_id, n_CHILDREN, clusters, db_dump_flag):
+def child(child_id, n_CHILDREN, clusters, db_dump_flag, generator_timeline):
     time.sleep(child_id-1) #one time, to stagger DB dumps
     child_id_text = f'child#{child_id}'
     db_dump_gap = n_CHILDREN
@@ -121,7 +121,7 @@ def child(child_id, n_CHILDREN, clusters, db_dump_flag):
         print(datetime.now(TZ), "END")
         return False
 
-    data_gen_obj = data_gen()
+    data_gen_obj = data_gen(generator_timeline)
     output = []
     freq_q_size = 2 #=1 essentially looks at previous msg only
     freq_q = Queue(maxsize = freq_q_size)
@@ -213,7 +213,7 @@ def main():
     children = []
     for i in range(n_CHILDREN):
         children.append(
-            multiprocessing.Process(target=child, args=(i+1, n_CHILDREN, clusters, True))
+            multiprocessing.Process(target=child, args=(i+1, n_CHILDREN, clusters, True, generator_timelines[i]))
         )
         children[-1].start()
     

@@ -57,3 +57,20 @@ python3 ./populate_db_config.py
 #3 children
 clear;clear;python3 build_db.py all && python3 populate_db_config.py && python3 ids.py 3
 ```
+
+- Notes
+```
+All packets are checked against bad clusters first, then good clusters, only then becomes an anomaly. 
+The anomaly is tagged to the first closest cluster (bad then good) based on its anomaly score (lower the better)
+
+
+good, bad get score of 0
+anomaly score range <- (0, 1]
+
+anomaly score = 1 - (n_inDimensions/total_dimensions)
+
+anomaly score of 1 implies fully outside the cluster
+anomaly cant have score 0 as that means its fully inside a cluster and thus has to be good/bad
+higher the anomaly score, the more outside the cluster it is
+we pick the lowest anomaly for a packet score and send to sql (i.e. tagging the closest cluster)
+```
